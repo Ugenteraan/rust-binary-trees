@@ -21,7 +21,7 @@ impl KDTreeNode {
 fn insert(root: &Rc<RefCell<KDTreeNode>>, value: (i32, i32), check_left: bool) {
     let mut node = root.borrow_mut();
 
-    if value.0 < node.value.0 {
+    if (check_left && value.0 < node.value.0) || (!check_left && value.1 < node.value.1) {
         match &node.left {
             Some(left_child) => insert(left_child, value, !check_left),
             None => node.left = Some(KDTreeNode::new(value)),
@@ -30,6 +30,26 @@ fn insert(root: &Rc<RefCell<KDTreeNode>>, value: (i32, i32), check_left: bool) {
         match &node.right {
             Some(right_child) => insert(right_child, value, !check_left),
             None => node.right = Some(KDTreeNode::new(value)),
+        }
+    }
+}
+
+fn search(node: &Rc<RefCell<KDTreeNode>>, value: (i32, i32), check_left: bool) -> bool {
+    let n = node.borrow();
+
+    if value == n.value {
+        return true;
+    }
+
+    if (check_left && value.0 < n.value.0) || (!check_left && value.1 < n.value.1) {
+        match &n.left {
+            Some(left_child) => search(&left_child, value, !check_left),
+            None => false,
+        }
+    } else {
+        match &n.right {
+            Some(right_child) => search(&right_child, value, !check_left),
+            None => false,
         }
     }
 }
@@ -55,5 +75,8 @@ fn main() {
     insert(&root, (-56, 11), true);
     insert(&root, (68, -89), true);
 
-    inorder_traversal(&Some(root));
+    //inorder_traversal(&Some(root));
+
+    let res: bool = search(&root, (-37, -58), true);
+    println!("{:?}", res);
 }
