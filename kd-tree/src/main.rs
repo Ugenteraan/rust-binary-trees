@@ -1,82 +1,74 @@
-use std::cell::RefCell;
-use std::rc::Rc;
-
 #[derive(Debug)]
 struct KDTreeNode {
     value: (i32, i32),
-    left: Option<Rc<RefCell<KDTreeNode>>>,
-    right: Option<Rc<RefCell<KDTreeNode>>>,
+    left: Option<Box<KDTreeNode>>,
+    right: Option<Box<KDTreeNode>>,
 }
 
 impl KDTreeNode {
-    fn new(root_value: (i32, i32)) -> Rc<RefCell<KDTreeNode>> {
-        Rc::new(RefCell::new(KDTreeNode {
-            value: root_value,
+    fn new(value: (i32, i32)) -> Self {
+        KDTreeNode {
+            value,
             left: None,
             right: None,
-        }))
-    }
-}
-
-fn insert(root: &Rc<RefCell<KDTreeNode>>, value: (i32, i32), check_left: bool) {
-    let mut node = root.borrow_mut();
-
-    if (check_left && value.0 < node.value.0) || (!check_left && value.1 < node.value.1) {
-        match &node.left {
-            Some(left_child) => insert(left_child, value, !check_left),
-            None => node.left = Some(KDTreeNode::new(value)),
-        }
-    } else {
-        match &node.right {
-            Some(right_child) => insert(right_child, value, !check_left),
-            None => node.right = Some(KDTreeNode::new(value)),
         }
     }
-}
 
-fn search(node: &Rc<RefCell<KDTreeNode>>, value: (i32, i32), check_left: bool) -> bool {
-    let n = node.borrow();
-
-    if value == n.value {
-        return true;
-    }
-
-    if (check_left && value.0 < n.value.0) || (!check_left && value.1 < n.value.1) {
-        match &n.left {
-            Some(left_child) => search(&left_child, value, !check_left),
-            None => false,
-        }
-    } else {
-        match &n.right {
-            Some(right_child) => search(&right_child, value, !check_left),
-            None => false,
+    fn insert(&mut self, value: (i32, i32), even_depth: bool) {
+        //even depth is used to check if the current depth is at an even level or odd level.
+        //it starts with false since the first level (1) is an odd number.
+        if (!even_depth && value.0 < self.value.0) || (even_depth && value.1 < self.value.1) {
+            if let Some(ref mut left) = self.left {
+                left.insert(value, !even_depth); //flip the even_depth.
+            } else {
+                self.left = Some(Box::new(KDTreeNode::new(value)));
+            }
+        } else {
+            if let Some(ref mut right) = self.right {
+                right.insert(value, !even_depth);
+            } else {
+                self.right = Some(Box::new(KDTreeNode::new(value)));
+            }
         }
     }
-}
 
-fn inorder_traversal(node: &Option<Rc<RefCell<KDTreeNode>>>) {
-    if let Some(node) = node {
-        let n = node.borrow();
+    fn print_tree(&self, prefix: String, is_left: bool) {
+        println!(
+            "{}{} ({}, {})",
+            prefix,
+            if is_left { "├──" } else { "└──" },
+            self.value.0,
+            self.value.1
+        );
 
-        inorder_traversal(&n.left);
-        println!("{:?}", n.value);
-        inorder_traversal(&n.right);
+        if let Some(ref left) = self.left {
+            left.print_tree(format!("{}{}", prefix, if is_left { "│   " } else { "    " }), true);
+        }
+        if let Some(ref right) = self.right {
+            right.print_tree(format!("{}{}", prefix, if is_left { "│   " } else { "    " }), false);
+        }
     }
+
+
 }
 
 fn main() {
-    let root = KDTreeNode::new((8, 9));
+    let mut root = KDTreeNode::new((9, 1));
 
-    insert(&root, (3, 2), true);
-    insert(&root, (10, 12), true);
-    insert(&root, (15, 48), true);
-    insert(&root, (1, -56), true);
-    insert(&root, (-36, -58), true);
-    insert(&root, (-56, 11), true);
-    insert(&root, (68, -89), true);
+    let points = [
+        (3, 6),
+        (2, 7),
+        (6, 12),
+        (17, 15),
+        (13, 15),
+        (10, 19),
+    ];
 
-    //inorder_traversal(&Some(root));
+    for point in points {
+        root.insert(point, false);
+    }
 
-    let res: bool = search(&root, (-37, -58), true);
-    println!("{:?}", res);
+    println!("KD-Tree:");
+
+    root.print_tree(String::new(), false);
 }
